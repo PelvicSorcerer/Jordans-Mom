@@ -9,14 +9,10 @@ from eyed3 import mp3
 import eyed3
 import discord
 from discord.ext import commands
-
 from sound import Sound
-#from dotenv import load_dotenv
 
-#load_dotenv()
-#TOKEN = os.getenv('ODIxMTY3MDQxNjUzNTA2MDU4.YE_xZw.3F2v-7_bN-iQBlojxSPeoyK3jk4')
-
-TOKEN = 'ODIxMTY3MDQxNjUzNTA2MDU4.YE_xZw.3F2v-7_bN-iQBlojxSPeoyK3jk4'
+with open('token.txt') as f:
+    TOKEN = f.readline()
 GUILD = 545759784553545758
 
 intents = discord.Intents.default()
