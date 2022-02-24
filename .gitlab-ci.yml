@@ -1,0 +1,48 @@
+variables:
+  IMAGE_ALPINE: alpine:latest
+  IMAGE_PYTHON: python:3.10.0b4-alpine3.14
+
+stages:
+  - scan
+  - test
+  - prepare
+  - deploy
+
+lint:
+  stage: scan
+  image: $IMAGE_PYTHON
+  script:
+    - echo "Example python flake8 lint stage goes here"
+
+scan:
+  stage: scan
+  image: $IMAGE_ALPINE
+  script:
+    - echo "Example SAST scanning goes here"
+
+run-tests:
+  stage: test
+  image: $IMAGE_PYTHON
+  before_script:
+    - echo "Install requirements"
+    # - pip install -r requirements.txt
+  script:
+    - echo "Run python unit tests"
+    #- pytest
+
+run-migrations:
+  stage: prepare
+  image: $IMAGE_PYTHON
+  before_script:
+    - echo "Install requirements"
+    # - pip install -r requirements.txt
+  script:
+    - echo "Run database migrations against RDS database"
+
+deploy-app:
+  stage: deploy
+  image: $IMAGE_PYTHON
+  before_script:
+    - pip install -r requirements.txt
+  script:
+    - echo "deploy new application changes to EC2 instance and restart it"
