@@ -222,9 +222,9 @@ async def get_sound(path):
 async def get_sounds():
     print(f'get_sounds: entered')
     sounds = []
-    for file in os.listdir("BotFiles\Audio"):
+    for file in os.listdir("BotFiles/Audio"):
         print(f'get_sounds: file == {file}')
-        path = f'BotFiles\Audio\{file}'
+        path = f'BotFiles/Audio/{file}'
         mp3_file = mp3.Mp3AudioFile(path)
         if mp3_file.tag != None:
             name = mp3_file.tag.title
@@ -294,11 +294,13 @@ async def play_audio(voice_channel, sound):
     if voice_channel != None:
         #channel = voice_channel.name
         vc = await voice_channel.connect()
-        vc.play(discord.FFmpegPCMAudio(executable="BotFiles\\ffmpeg.exe", source=sound.path))
+        #load opus for the .play function
+        discord.opus.load_opus()
+        vc.play(discord.FFmpegPCMAudio(executable="BotFiles/ffmpeg.exe", source=sound.path))
         vc.pause()
         await asyncio.sleep(1)
         vc.resume()
-        await disconnect_after_duration(duration, vc)
+        await disconnect_after_duration(duration + 1, vc)
         # Sleep while audio is playing.
             # while vc.is_playing():
             #     time.sleep(2)

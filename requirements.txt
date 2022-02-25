@@ -1,4 +1,4 @@
 eyed3
 discord.py
 requests
-random
+PyNaCl
