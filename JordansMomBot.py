@@ -10,12 +10,13 @@ import eyed3
 import discord
 from discord.ext import commands
 from sound import Sound
+from sound import BadTagException
 
 with open('token.txt') as f:
     TOKEN = f.readline()
 GUILD = 545759784553545758
 
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.members = True
 intents.presences = True
 intents.voice_states = True
@@ -38,150 +39,157 @@ async def on_ready():
 
 @bot.event
 async def on_voice_state_update(member, before, after):
-    print(f'on_voice_state_update: entered')
-    print(f'on_voice_state_update: member == {member.name}')
     if before.channel != None:
         print(f'on_voice_state_update: before == {before.channel.name}')
     else:
         print('on_voice_state_udpate: before == None')
     if after.channel != None and after.channel.name != 'The Worst Kind of People':
-        print(f'on_voice_state_update: after == {after.channel.name}')
-        print(f'on_voice_state_update: member status == {member.status}')
         if before.channel != after.channel:
-            await member_join(member, after)
+            await play_join_sound(member, after.channel)
         if member.status != discord.Status.online and member.status != discord.Status.dnd:
             await member.move_to(None)
             await member.create_dm()
-            await member.dm_channel.send('You can\'t speak in voice channels in Jordan\'s Mom if your status is set to Invisible or Away. Update your status and try again!')
+            await member.dm_channel.send('You can\'t speak in voice channels in Jordan\'s Mom if your status is set to Invisible or Away; that\'s shady af. Update your status and try again!')
     else:
         print('on_voice_state_udpate: after == None')
 
 @bot.event
 async def on_message(message):
-    print(f'on_message: entered')
     if message.author == bot.user:
+        await asyncio.sleep(60)
+        await message.delete()
         return
     member = message.author
+    print(f'on_message: member = {message.author}')
+    print(f'on_message: member.name = {message.author.name}')
+    #print(f'on_message: member.upper() = {message.author.upper()}')
+    print(f'on_message: member.name.upper() = {message.author.name.upper()}')
     voice_channel = get_voice_channel(member)
     is_in_voice_channel = voice_channel != None
     guild = get_guild()
     if is_in_voice_channel:
         await play_message_sound(message, voice_channel)
     await bot.process_commands(message)
+    if message != None:
+        if message.content[0] == '#':
+            await asyncio.sleep(60)
+            await message.delete()
 
 @bot.event
 async def on_raw_reaction_add(payload):
     #payload = discord.RawReactionActionEvent
-    print('on_raw_reaction_add: entered')
-    print(f'on_raw_reaction_add: event_type == {payload.event_type}')
-    if payload.member.voice.channel != None:
-        voice_channel = payload.member.voice.channel
-        print(f'on_raw_reaction_add: reactor in voice channel {voice_channel.name}')
-        emoji = payload.emoji
-        print(f'on_raw_reaction_add: emoji is {emoji.name}')
-        sound = random.choice(await get_sounds_by_emoji(emoji))
-        print(f'on_raw_reaction_add: calling play_audio({voice_channel.name, sound.name})')
-        await play_audio(voice_channel, sound)
+    if payload.member.voice != None:
+        if payload.member.voice.channel != None:
+            voice_channel = payload.member.voice.channel
+            emoji = payload.emoji
+            sound = random.choice(await get_sounds_by_emoji(emoji))
+            await play_audio(voice_channel, sound)
 #endregion
 
 #region Commands
-@bot.command(name='sound', help='Plays the requested sound in your voice channel. e.g. \'#sound Gleh\'')
+@bot.command(name='sound', aliases=['s'], help='Plays the requested sound in your voice channel. e.g. \'#sound davinky?\'')
 async def on_sound_command(ctx, arg):
-    print('on_sound_command: entered')
-    print(f'on_sound_command: arg == {arg}')
     sounds = []
-    print('Sound files:')
-    for filename in os.listdir("BotFiles\Audio"):
-        print(f'     {filename}')
+    for filename in os.listdir("Audio/Audio"):
         sounds.append(filename[:-4])
-        print(f'     {filename[:-4]}')
     sound_name = arg
-    sound = await get_sound_by_name(arg)
-    if sound_name == None:
-        print(f'play_audio: {sound_name} not in sounds')
-        ctx.send(f'Sound {arg} not found.')
+    sound = await get_sound_by_name(sound_name)
+    if sound == None:
+        await ctx.message.reply(f'Sound {arg} not found.')
         return
     # Gets voice channel of message author
-    voice_channel = ctx.author.voice.channel
-    if voice_channel != None:
+    if ctx.author.voice != None:
+        voice_channel = ctx.author.voice.channel
         await play_audio(voice_channel, sound)
+        # Delete command after the audio is done playing.
+        await ctx.message.delete()
     else:
-        await ctx.send(str(ctx.author.name) + "is not in a voice channel.")
-    # Delete command after the audio is done playing.
-    await ctx.message.delete()
+        await ctx.message.reply('You can\'t play sounds if you\'re not in a voice channel.')
 
 @bot.command(name='soundlist', help = 'List of all sounds playable with the #sound command')
 async def on_soundlist_command(ctx):
-    print('on_soundlist_command: entered')
     sounds = await get_sounds()
+    sounds.sort()
     content = '```'
     for sound in sounds:
         content += sound.name + '\n'
     content += '```'
     my_message = await ctx.message.reply(content)
-    await asyncio.sleep(60)
-    await ctx.message.delete()
-    await my_message.delete()
 
-@bot.command(name='addsound', help = 'Tell Adam to write this help entry')
-async def on_addsound_command(ctx):
-    print('on_addsound_command: entered')
+@bot.command(name = 'soundinfo', help = 'Lists information about the sound, e.g. #soundinfo davinky?')
+async def on_soundinfo(ctx, arg):
+    sound = await get_sound_by_name(arg)
+    if sound == None:
+        my_message = await ctx.message.reply(f'No sound found with title {arg}. Try ```#soundlist```.')
+    else:
+        content = await get_soundinfo_text(sound)
+        my_message = await ctx.message.reply(await get_soundinfo_text(sound))
+
+@bot.command(name='addsound', help = 'Add a sound to the bot. Send a single message containing the name of the sound and an attached MP3. e.g. \'addsound davinky?\'\n Passing no \'username\' argument will add the sound to your intros.')
+async def on_addsound_command(ctx, soundname):
     if len(ctx.message.attachments) == 0:
-        my_message = await ctx.message.reply('.MP3 must be attached to command message')
+        await ctx.message.reply('.MP3 must be attached to command message')
     elif len(ctx.message.attachments) > 1:
-        my_message = await ctx.message.reply('Command message can only have one attachment')
+        await ctx.message.reply('Command message can only have one attachment')
     else:
         attachment = ctx.message.attachments[0]
         filename = attachment.filename
-        print(f'on_addsound_command: filename == {filename}')
         extension = filename[-4:].upper()
-        print(f'on_addsound_command: extension == {extension}')
         if extension == '.MP3':
             url = attachment.url
-            print(f'on_addsound_command: url == {url}')
-            full_save_path = 'BotFiles\Audio\\' + attachment.filename
-            print(f'on_addsound_command: full_save_path == {full_save_path}')
+            full_save_path = 'Audio/Audio/' + attachment.filename
             r = requests.get(url)
             with open(full_save_path, 'wb') as f:
                 f.write(r.content)
-            print(f'on_addsound_command: downloaded!')
-            sound = get_sound(full_save_path)
+            sound = create_sound(soundname, full_save_path)
+            sound.set_creator(ctx.author.name)
             if sound == None:
-                my_message = await ctx.message.reply('Title metadata is missing or has invalid characters')
+                await ctx.message.reply('Title metadata is missing or has invalid characters')
             else:
-                content = f'```Name: {sound.name}\nUsers: {sound.user_names}```'
-                #my_message = await ctx.message.reply()
+                content = await get_soundinfo_text(sound)
+                await ctx.message.reply(content)
         else:
-            my_message = await ctx.message.reply('File must be an .MP3')
-    print(f'on_addsound_command: finished')
+            await ctx.message.reply('File must be an .MP3')
 
-@bot.command(name = 'editsound', help = 'COMMAND NOT FINISHED! Opens the sound editing menu for a sound. e.g. #editsound Davinky?')
-async def on_editsound_command(ctx, arg):
-    print('on_editsound_command: entered')
+# @bot.command(name = 'editsound', help = 'COMMAND NOT FINISHED! Opens the sound editing menu for a sound. e.g. #editsound Davinky?')
+# async def on_editsound_command(ctx, arg):
+#     sound = await get_sound_by_name(arg)
+#     if sound == None:
+#         await ctx.message.reply(f'No sound found with title {arg}. Try ```#soundlist```.')
+#         return
+#     else:
+#         content = 'Options\n'
+#         content += '```'
+#         content += '1. Rename\n'
+#         content += '2. Set as User Intro\n'
+#         #add more options here
+#         content += '```\n'
+#     my_message =  await ctx.message.reply(content)
+#     # user_reply = await bot.wait_for('message', timeout=60.0, check = check)
+#     # if user_reply != None:
+#     #     if user_reply.content = '2':
+
+@bot.command(name = 'addintro', help = 'Add a sound when entering a voice channel. e.g. \'#addintro davinky? Peaks14\'')
+async def on_addintro_command(ctx, soundname, username=None):
+    sound = await get_sound_by_name(soundname)
+    if sound == None:
+        my_message = await ctx.message.reply(f'No sound found with title {soundname} Try ```#soundlist```.')
+    else:
+        if username == None:
+            username = ctx.message.author.name
+        sound.add_user_name(username)
+        await ctx.message.reply(await get_soundinfo_text(sound))
+
+@bot.command(name = 'removeintro', help = 'Remove a sound from your intros. e.g. \'#removeintro davinky?\'')
+async def on_removeintro_command(ctx, arg):
     sound = await get_sound_by_name(arg)
     if sound == None:
-        await ctx.message.reply(f'No sound found with title {arg}. Try ```#soundlist```.')
+        my_message = await ctx.message.reply(f'No sound found with title {arg}. Try ```#soundlist```.')
         return
     else:
-        content = 'Sound Info\n'
-        content += '```'
-        content += 'Name:     '
-        content += sound.name
-        content += '\nUsers:    '
-        for user in sound.user_names:
-            content += user + '\n          '
-        content += '\nEmoji:    '
-        for emoji in sound.emoji_names:
-            content += user + '\n          '
-        content += '\nCreator:  '
-        content += sound.creator_name
-        content += '```\n'
-        content += 'Options\n'
-        content += '```'
-        content += '1. Rename\n'
-    await ctx.message.reply(content)
-    #message = await bot.wait_for('message', check = check)
-    #if
+        sound.remove_user_name(ctx.message.author.name)
+        await ctx.message.reply(await get_soundinfo_text(sound))
+
 #endregion
 
 def get_voice_channel(member):
@@ -197,70 +205,18 @@ def get_guild():
             return guild
     raise Exception("Bot not in guild")
 
-async def get_sound(path):
-    print(f'get_sound: entered')
-    sound = None
-    if not os.path.exists(path):
-        print(f'get_sound: path {path} does not exist')
-        return
-    mp3_file = mp3.Mp3AudioFile(path)
-    if mp3_file.tag != None:
-        name = mp3_file.tag.title
-        if mp3_file.tag.artist != None:
-            user_names = mp3_file.tag.artist.replace(' ', '').split(',')
-        else:
-            user_names = []
-        if mp3_file.tag.album != None:
-            emoji_names = mp3_file.tag.album.replace(' ', '').split(',')
-        else:
-            emoji_names = None
-        sound = Sound(path, name, user_names, emoji_names)
-    else:
-        print(f'get_sound: bad/missing tag data')
-    return sound
-
-async def get_sounds():
-    print(f'get_sounds: entered')
-    sounds = []
-    for file in os.listdir("BotFiles/Audio"):
-        print(f'get_sounds: file == {file}')
-        path = f'BotFiles/Audio/{file}'
-        mp3_file = mp3.Mp3AudioFile(path)
-        if mp3_file.tag != None:
-            name = mp3_file.tag.title
-            if mp3_file.tag.artist != None:            
-                user_names = mp3_file.tag.artist.replace(' ', '').split(',')
-            else:
-                user_names = []
-            if mp3_file.tag.album != None:            
-                emoji_names = mp3_file.tag.album.replace(' ', '').split(',')
-            else:
-                emoji_names = []
-            if mp3_file.tag.album_artist != None:
-                creator_user_name = mp3_file.tag.album_artist
-            else:
-                creator_user_name = ''
-            sounds.append(Sound(path, name, user_names, emoji_names, creator_user_name))
-        else:
-            print(f'get_sounds: bad/missing tag data')
-    return sounds
-
-def get_sound_names(sounds):
-    print(f'get_sound_names: entered')
-    sound_names = []
-    for sound in sounds:
-        sound_names.append(sound.name)
-    return sound_names
-
+#region Getting Sounds
 async def get_sound_by_name(sound_name):
-    print(f'get_sound_by_name: entered')
-    for sound in await get_sounds():
+    sounds = await get_sounds()
+    for sound in sounds:
         if sound.name.upper() == sound_name.upper():
+            return sound
+    for sound in sounds:
+        if sound.name.upper() == sound_name.upper() + '1':
             return sound
     return None
 
 async def get_sounds_by_user(user):
-    print(f'get_sounds_by_user: entered')
     sounds = []
     for sound in await get_sounds():
         for user_name in sound.user_names:
@@ -269,86 +225,106 @@ async def get_sounds_by_user(user):
     return sounds
 
 async def get_sounds_by_emoji(emoji):
-    print('get_sounds_by_emoji: entered')
-    print(f'get_sounds_by_emoji: emoji.name == {emoji.name}')
     sounds = []
     for sound in await get_sounds():
         for emoji_name in sound.emoji_names:
             if emoji_name.upper() == emoji.name.upper():
                 sounds.append(sound)
-                print(f'get_sounds_by_emoji: found sound.name == {sound.name}')
     return sounds
 
-async def member_join(member, after):
-    print('member_join: entered')
-    print(f'member_join: member == {member.name}')
-    if after.channel != None:
-        await play_join_sound(member, after.channel)        
+async def get_sounds():
+    sounds = []
+    for file in os.listdir("Audio/Audio"):
+        path = f'Audio/Audio/{file}'
+        try:
+            sounds.append(await get_sound(path))
+        except BadTagException as e:
+            print(e)
+    return sounds
 
-async def play_audio(voice_channel, sound):
-    print('play_audio: entered')
-    print(f'play_audio: sound.name == {sound.name}')
-    duration = await get_sound_duration(sound)
-    # Gets voice channel of message author
-    channel = None
-    if voice_channel != None:
-        #channel = voice_channel.name
-        vc = await voice_channel.connect()
-        #load opus for the .play function
-        discord.opus.load_opus()
-        vc.play(discord.FFmpegPCMAudio(executable="BotFiles/ffmpeg.exe", source=sound.path))
-        vc.pause()
-        await asyncio.sleep(1)
-        vc.resume()
-        await disconnect_after_duration(duration + 1, vc)
-        # Sleep while audio is playing.
-            # while vc.is_playing():
-            #     time.sleep(2)
-            # await vc.disconnect()
-        # if duration != None:
-        #      time.sleep(duration + 2)
-        # await vc.disconnect()
-        #vc.disconnect()
-    else:
-        print('play_audio: voice_channel == none')
+async def get_sound(path):
+    sound = None
+    if not os.path.exists(path):
+        return
+    sound = Sound(path)
+    return sound
+#endregion
 
-async def get_sound_duration(sound):
-    print('get_sound_duration: entered')
-    print(f'get_sound_duration: sound.name == {sound.name}')
-    af = eyed3.load(sound.path)
-    if af != None:
-        duration = af.info.time_secs
-        print('get_sound_duration: duration == {duration}')
-    else:
-        print(f'get_sounds: bad/missing tag data')
-    return duration
-
-async def disconnect_after_duration(duration, voice_channel):
-    time.sleep(duration)
-    await voice_channel.disconnect()
-
+#region Playing Sounds
 async def play_join_sound(member, voice_channel):
-    print('play_join_sound: entered')
+    print(f'play_join_sound: member = {member}')
+    print(f'play_join_sound: member.name = {member.name}')
     sounds = await get_sounds_by_user(member)
     if len(sounds) > 0:
         sound = random.choice(sounds)
-        print(f'play_join_sound: calling play_audio({voice_channel.name}, {sound.name})')
         await play_audio(voice_channel, sound)
 
 async def play_message_sound(message, voice_channel):
-    print('play_message_sound: entered')
     if message.guild == None:
         return
     for emoji in await message.guild.fetch_emojis():
         if str(emoji.id) in message.content:
             sound = random.choice(await get_sounds_by_emoji(emoji))
-            print(f'play_message_sound: calling play_audio({voice_channel.name}, {sound.name}')
             await play_audio(voice_channel, sound)
             return
     else:
         print(f'play_message_sound: no sound found for message')
     return
 
+async def play_audio(voice_channel, sound):
+    # Gets voice channel of message author
+    if voice_channel != None:
+        fail = True
+        while fail:
+            try:
+                vc = await voice_channel.connect()
+                fail = False
+            except:
+                fail = True
+        vc.play(discord.FFmpegOpusAudio(source=sound.path))
+        #await disconnect_after_duration(duration, vc)
+        # Sleep while audio is playing.
+        while vc.is_playing():
+            time.sleep(.1)
+        await vc.disconnect()
+    else:
+        print('play_audio: voice_channel == none')
+#endregion
+
+#region Managing Sounds
+async def get_soundinfo_text(sound):
+    content = 'Sound Info\n'
+    content += '```'
+    content += 'Name:     '
+    content += sound.name
+    content += '\nUsers:    '
+    for user in sound.user_names:
+        content += user + ','
+    content += '\nEmoji:    '
+    for emoji in sound.emoji_names:
+        content += emoji + ','
+    content += '\nCreator:  '
+    content += sound.creator_name
+    content += '```\n'
+    return content
+
+def create_sound(soundname, path):
+    my_mp3 = mp3.Mp3AudioFile(path)
+    my_mp3.initTag()
+    my_mp3.tag.title = soundname
+    my_mp3.tag.save()
+    sound = Sound(path)
+    return sound
+#endregion
+
+#should this become a property on the Sound?
+# def get_sound_duration(sound):
+#     af = eyed3.load(sound.path)
+#     if af != None:
+#         duration = af.info.time_secs
+#     else:
+#         raise Exception(f'get_sounds: bad/missing tag data')
+#     return duration
 
 bot.run(TOKEN)
 

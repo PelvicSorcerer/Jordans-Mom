@@ -2,3 +2,4 @@ eyed3
 discord.py
 requests
 PyNaCl
+opuslib
