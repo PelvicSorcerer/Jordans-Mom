@@ -13,6 +13,5 @@ RUN pip3 install -r requirements.txt
 
 COPY JordansMomBot.py JordansMomBot.py
 COPY sound.py sound.py
-COPY token.txt token.txt
 
 CMD [ "python3", "-u", "-m", "JordansMomBot", "run"]
