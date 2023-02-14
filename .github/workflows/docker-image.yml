@@ -19,6 +19,6 @@ jobs:
         docker login --username pelvicsorcerer --password ${{ secrets.DOCKER_HUB_KEY }}
         docker build . --file Dockerfile --tag pelvicsorcerer/images:jordans-mom
         docker push pelvicsorcerer/images:jordans-mom
-        ssh awmoore95@[2600:1700:3fe5:30f0:b497:f778:792e:a3f6]:49156 ${{ secrets.DOCKER_SERVER_PASS }}
+        ssh awmoore95@99.105.226.127 -p 49156 ${{ secrets.DOCKER_SERVER_PASS }}
         ./run-jordans-mom-bot.sh
         logout
