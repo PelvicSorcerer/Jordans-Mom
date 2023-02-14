@@ -12,8 +12,9 @@ from discord.ext import commands
 from sound import Sound
 from sound import BadTagException
 
-with open('token.txt') as f:
-    TOKEN = f.readline()
+#with open('token.txt') as f:
+#    TOKEN = f.readline()
+TOKEN = os.environ['BOT_TOKEN']
 GUILD = 545759784553545758
 
 intents = discord.Intents.all()
@@ -90,7 +91,7 @@ async def on_raw_reaction_add(payload):
 @bot.command(name='sound', aliases=['s'], help='Plays the requested sound in your voice channel. e.g. \'#sound davinky?\'')
 async def on_sound_command(ctx, arg):
     sounds = []
-    for filename in os.listdir("Audio/Audio"):
+    for filename in os.listdir("Audio"):
         sounds.append(filename[:-4])
     sound_name = arg
     sound = await get_sound_by_name(sound_name)
@@ -125,7 +126,7 @@ async def on_soundinfo(ctx, arg):
         content = await get_soundinfo_text(sound)
         my_message = await ctx.message.reply(await get_soundinfo_text(sound))
 
-@bot.command(name='addsound', help = 'Add a sound to the bot. Send a single message containing the name of the sound and an attached MP3. e.g. \'addsound davinky?\'\n Passing no \'username\' argument will add the sound to your intros.')
+@bot.command(name='addsound', help = 'Add a sound to the bot. Send a single message containing the name of the sound and an attached MP3. e.g. \'addsound davinky?\'\n')
 async def on_addsound_command(ctx, soundname):
     if len(ctx.message.attachments) == 0:
         await ctx.message.reply('.MP3 must be attached to command message')
@@ -137,7 +138,7 @@ async def on_addsound_command(ctx, soundname):
         extension = filename[-4:].upper()
         if extension == '.MP3':
             url = attachment.url
-            full_save_path = 'Audio/Audio/' + attachment.filename
+            full_save_path = 'Audio/' + attachment.filename
             r = requests.get(url)
             with open(full_save_path, 'wb') as f:
                 f.write(r.content)
@@ -169,7 +170,7 @@ async def on_addsound_command(ctx, soundname):
 #     # if user_reply != None:
 #     #     if user_reply.content = '2':
 
-@bot.command(name = 'addintro', help = 'Add a sound when entering a voice channel. e.g. \'#addintro davinky? Peaks14\'')
+@bot.command(name = 'addintro', help = 'Add a sound when entering a voice channel. e.g. \'#addintro davinky? Peaks14\' Passing no \'username\' argument will add the sound to your intros.')
 async def on_addintro_command(ctx, soundname, username=None):
     sound = await get_sound_by_name(soundname)
     if sound == None:
@@ -234,8 +235,8 @@ async def get_sounds_by_emoji(emoji):
 
 async def get_sounds():
     sounds = []
-    for file in os.listdir("Audio/Audio"):
-        path = f'Audio/Audio/{file}'
+    for file in os.listdir("Audio"):
+        path = f'Audio/{file}'
         try:
             sounds.append(await get_sound(path))
         except BadTagException as e:

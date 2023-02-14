@@ -8,7 +8,7 @@
             "name": "PowerShell: Launch Script",
             "type": "PowerShell",
             "request": "launch",
-            "script": ".\\BuildAndDeploy.ps1",
+            "script": ".\\BuildAndRunLocally.ps1",
             "cwd": "${workspaceFolder}"
         }
     ]
