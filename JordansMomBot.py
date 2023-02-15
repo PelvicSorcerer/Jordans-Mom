@@ -2,7 +2,7 @@
 import os
 import enum
 import asyncio
-import time
+from asyncio import sleep
 import random
 import requests
 from eyed3 import mp3
@@ -12,8 +12,6 @@ from discord.ext import commands
 from sound import Sound
 from sound import BadTagException
 
-#with open('token.txt') as f:
-#    TOKEN = f.readline()
 TOKEN = os.environ['BOT_TOKEN']
 GUILD = 545759784553545758
 
@@ -206,6 +204,14 @@ def get_guild():
             return guild
     raise Exception("Bot not in guild")
 
+async def is_connected():
+    voice_client = discord.utils.get(bot.voice_clients, guild=get_guild())
+    return voice_client and voice_client.is_connected()
+
+async def get_voice_client():
+    voice_client = discord.utils.get(bot.voice_clients, guild=get_guild())
+    return voice_client
+
 #region Getting Sounds
 async def get_sound_by_name(sound_name):
     sounds = await get_sounds()
@@ -277,17 +283,25 @@ async def play_audio(voice_channel, sound):
     if voice_channel != None:
         fail = True
         while fail:
-            try:
-                vc = await voice_channel.connect()
+            voice_client = await get_voice_client()
+            if voice_client != None and voice_client.is_connected():
                 fail = False
-            except:
-                fail = True
-        vc.play(discord.FFmpegOpusAudio(source=sound.path))
-        #await disconnect_after_duration(duration, vc)
+            else:
+                try:
+                    voice_client = await voice_channel.connect()
+                    fail = False
+                except:
+                    print('play_audio: exception on voice_channel.connect()')
+                    fail = True
+                    await sleep(.1)
+        while voice_client.is_playing():
+            await sleep(.1)
+        voice_client.play(discord.FFmpegOpusAudio(source=sound.path))
         # Sleep while audio is playing.
-        while vc.is_playing():
-            time.sleep(.1)
-        await vc.disconnect()
+        while voice_client.is_playing():
+            await sleep(.1)
+        if voice_client.is_connected():
+            await voice_client.disconnect()
     else:
         print('play_audio: voice_channel == none')
 #endregion
