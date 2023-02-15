@@ -19,6 +19,10 @@ jobs:
         docker login --username pelvicsorcerer --password ${{ secrets.DOCKER_HUB_KEY }}
         docker build . --file Dockerfile --tag pelvicsorcerer/images:jordans-mom
         docker push pelvicsorcerer/images:jordans-mom
-        ssh awmoore95@99.105.226.127 -p 49156 ${{ secrets.DOCKER_SERVER_PASS }}
-        ./run-jordans-mom-bot.sh
-        logout
+    - name: Write SSH Keys
+      run: |
+        install -m 600 -D /dev/null ~/.ssh/id_rsa
+        echo "${{ secrets.DOCKER_SERVER_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+#        echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+    - name: Run Deploy Script on Server
+      run: ssh awmoore95@99.105.226.126 -p 49156 ./run-jordans-mom
