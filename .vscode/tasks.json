@@ -1,0 +1,36 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "docker-build",
+            "type": "docker-build",
+            "platform": "python",
+            "dockerBuild": {
+                "context": "${workspaceFolder}",
+                "dockerfile": "${workspaceFolder}/Dockerfile",
+            }
+        },
+        {
+            "label": "docker-run: debug",
+            "type": "docker-run",
+            "dependsOn": ["docker-build"],
+            "dockerRun": {
+                "containerName": "jordans-mom-container",
+                "env": {
+                    "BOT_TOKEN": ""
+                },
+                "volumes": [
+                    {
+                        "containerPath": "/app/Audio",
+                        "localPath": "${workspaceFolder}/Audio/Audio"
+                    }
+                ]
+            },
+            "python": {
+                "module": "JordansMomBot"
+            }
+        }
+    ]
+}
