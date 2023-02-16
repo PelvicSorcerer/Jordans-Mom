@@ -66,11 +66,28 @@ async def on_message(message):
     voice_channel = get_voice_channel(member)
     is_in_voice_channel = voice_channel != None
     guild = get_guild()
+    words = message.content.split()
+    if len(words) > 1:
+        first_word = words[0]
+        print(f'on_message: first_word = {first_word}')
+        second_word = words[1]
+        print(f'on_message: second_word = {second_word}')
+        response = 'Hi %s, %s Jordan\'s mom!'
+        if first_word.upper() in ['IM', 'I\'M']:
+            delete_message = True
+            fools_name = message.content.replace(first_word + ' ', '', 1)
+            content = response%(fools_name, first_word)
+            my_message = await message.reply(content)
+        elif first_word.upper() == 'I' and second_word.upper() == 'AM':
+            delete_message = True
+            fools_name = message.content.replace(first_word + ' ', '', 1).replace(second_word + ' ', '', 1)
+            content = response%(fools_name, first_word + ' ' + second_word)
+            my_message = await message.reply(content)
     if is_in_voice_channel:
         await play_message_sound(message, voice_channel)
     await bot.process_commands(message)
     if message != None:
-        if message.content[0] == '#':
+        if message.content[0] == '#' or delete_message:
             await asyncio.sleep(60)
             await message.delete()
 
