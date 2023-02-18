@@ -241,11 +241,14 @@ async def get_sound_by_name(sound_name):
     return None
 
 async def get_sounds_by_user(user):
+    soundNames = ['PFBDay1', 'PFBDay2', 'PFBDay3']
     sounds = []
-    for sound in await get_sounds():
-        for user_name in sound.user_names:
-            if user_name.upper() == user.name.upper():
-                sounds.append(sound)
+    for sound in soundNames:
+        sounds.append(await get_sound_by_name(sound))
+    # for sound in await get_sounds():
+    #     for user_name in sound.user_names:
+    #         if user_name.upper() == user.name.upper():
+    #             sounds.append(sound)
     return sounds
 
 async def get_sounds_by_emoji(emoji):
@@ -278,10 +281,11 @@ async def get_sound(path):
 async def play_join_sound(member, voice_channel):
     print(f'play_join_sound: member = {member}')
     print(f'play_join_sound: member.name = {member.name}')
-    sounds = await get_sounds_by_user(member)
-    if len(sounds) > 0:
-        sound = random.choice(sounds)
-        await play_audio(voice_channel, sound)
+    if member.name != 'Jordan\'s Mom':
+        sounds = await get_sounds_by_user(member)
+        if len(sounds) > 0:
+            sound = random.choice(sounds)
+            await play_audio(voice_channel, sound)
 
 async def play_message_sound(message, voice_channel):
     if message.guild == None:
