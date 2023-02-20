@@ -241,14 +241,11 @@ async def get_sound_by_name(sound_name):
     return None
 
 async def get_sounds_by_user(user):
-    soundNames = ['PFBDay1', 'PFBDay2', 'PFBDay3', 'PFBDay4', 'PFBDay5', 'PFBDay6', 'PFBDay7', 'PFBDay8', 'PFBDay9', 'PFBDay10', 'PFBDay11', 'PFBDay12', 'PFBDay13', 'PFBDay14', 'PFBDay15']
     sounds = []
-    for sound in soundNames:
-        sounds.append(await get_sound_by_name(sound))
-    # for sound in await get_sounds():
-    #     for user_name in sound.user_names:
-    #         if user_name.upper() == user.name.upper():
-    #             sounds.append(sound)
+    for sound in await get_sounds():
+        for user_name in sound.user_names:
+            if user_name.upper() == user.name.upper():
+                sounds.append(sound)
     return sounds
 
 async def get_sounds_by_emoji(emoji):
