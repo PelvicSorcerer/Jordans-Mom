@@ -27,4 +27,4 @@ jobs:
         echo "${{ secrets.DOCKER_SERVER_SSH_PRIVATE_KEY }}" >> ~/.ssh/id_rsa
         echo ssh-keyscan -H -p 49158 99.105.226.127 >> ~/.ssh/known_hosts
     - name: Run Deploy Script on Server
-      run: ssh awmoore95@99.105.226.127 -p 49156 ./run-jordans-mom.sh
+      run: ssh awmoore95@99.105.226.127 -p 49158 ./run-jordans-mom.sh
