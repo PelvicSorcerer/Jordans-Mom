@@ -51,6 +51,15 @@ async def on_voice_state_update(member, before, after):
             await member.dm_channel.send('You can\'t speak in voice channels in Jordan\'s Mom if your status is set to Invisible or Away; that\'s shady af. Update your status and try again!')
     else:
         print('on_voice_state_udpate: after == None')
+    if before.channel != after.channel and before.channel != None and len(after.channel.members) == 1:
+        print('A user has just joined their first voice channel since they got on, and they are alone in that channel')
+        if after.channel.guild.id == GUILD and after.channel.name == 'General':
+            print('The user joined the General voice channel')
+            for text_channel in after.channel.guild.text_channels:
+                if text_channel.name == 'general':
+                    await text_channel.send(f'Look!! {member.name} is eating lunch by themselves again in the {after.channel.name} voice channel!!')
+        else:
+            print('The user did not join the General voice channel')
 
 @bot.event
 async def on_message(message):
